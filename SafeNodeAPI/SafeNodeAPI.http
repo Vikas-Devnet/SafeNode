@@ -1,6 +1,31 @@
-@SafeNodeAPI_HostAddress = http://localhost:5226
+﻿@SafeNodeAPI_HostAddress = http://localhost:5226/api/auth
 
-GET {{SafeNodeAPI_HostAddress}}/weatherforecast/
-Accept: application/json
+### ✅ 1. Register New User
+POST {{SafeNodeAPI_HostAddress}}/registerUser
+Content-Type: application/json
 
-###
+{
+  "firstName": "<ENTER_FIRST_NAME_HERE>",
+  "lastName": "<ENTER_LAST_NAME_HERE>",
+  "email": "<ENTER_EMAIL_ADDRESS_HERE>",
+  "password": "<ENTER_PASSWORD_HERE>",
+  "role": "<ENTER_USERROLE_HERE>" 
+}
+
+### ✅ 2. Login User
+POST {{SafeNodeAPI_HostAddress}}/login
+Content-Type: application/json
+
+{
+  "email": "<ENTER_EMAIL_ADDRESS_HERE>",
+  "password": "<ENTER_PASSWORD_HERE>"
+}
+
+### ✅ 3. Refresh JWT Token
+POST {{SafeNodeAPI_HostAddress}}/refreshToken
+Content-Type: application/json
+
+{
+  "email": "<ENTER_EMAIL_ADDRESS_HERE>",
+  "refreshToken": "<PASTE_REFRESH_TOKEN_HERE>"
+}
