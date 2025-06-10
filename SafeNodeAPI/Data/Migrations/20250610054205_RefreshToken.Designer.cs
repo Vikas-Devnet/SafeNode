@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SafeNodeAPI.Data;
 
@@ -11,9 +12,11 @@ using SafeNodeAPI.Data;
 namespace SafeNodeAPI.Data.Migrations
 {
     [DbContext(typeof(SafeNodeDbContext))]
-    partial class SafeNodeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250610054205_RefreshToken")]
+    partial class RefreshToken
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -22,35 +22,21 @@ namespace SafeNodeAPI.Src.Services.Auth
             if (user == null || !VerifyPassword(request.Password, user.PasswordHash, user.PasswordSalt))
                 throw new UnauthorizedAccessException("Invalid email or password");
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_jwtSettings.SecretKey);
+            var token = CreateJwtToken(user, out DateTime expiryDate);
+            var refreshToken = GenerateRefreshToken();
 
-            var claims = new[]
-            {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role?.ToString()??"")
-            };
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
-                Issuer = _jwtSettings.Issuer,
-                Audience = _jwtSettings.Audience,
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays);
+            await _userRepo.UpdateUserAsync(user);
             return new LoginResponse
             {
-                Token = tokenHandler.WriteToken(token),
-                Expiry = tokenDescriptor.Expires!.Value
+                Token = token,
+                RefreshToken = refreshToken,
+                Expiry = expiryDate,
+                RefreshTokenExpiry = user.RefreshTokenExpiry,
+                Message = "Logged in Successfully"
             };
         }
-
-
 
         public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
         {
@@ -78,8 +64,33 @@ namespace SafeNodeAPI.Src.Services.Auth
                 UserId = savedUser.Id,
                 Email = savedUser.Email,
                 Role = savedUser.Role.ToString(),
+                Message = "User Registered Successfully"
             };
         }
+        public async Task<RefreshTokenResponse> RefreshTokenAsync(RefreshTokenRequest request)
+        {
+            var user = await _userRepo.GetUserByEmailAsync(request.Email);
+            if (user == null || user.RefreshToken != request.RefreshToken || user.RefreshTokenExpiry <= DateTime.UtcNow)
+                throw new UnauthorizedAccessException("Invalid or expired refresh token");
+
+            var newJwtToken = CreateJwtToken(user, out DateTime expiry);
+            var newRefreshToken = GenerateRefreshToken();
+
+            user.RefreshToken = newRefreshToken;
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays);
+            await _userRepo.UpdateUserAsync(user);
+
+            return new RefreshTokenResponse
+            {
+                Token = newJwtToken,
+                RefreshToken = newRefreshToken,
+                Expiry = expiry,
+                RefreshTokenExpiry = user.RefreshTokenExpiry,
+                Message = "Token refreshed successfully"
+            };
+        }
+
+
         private static void CreatePasswordHash(string password, out byte[] hash, out byte[] salt)
         {
             using var hmac = new HMACSHA512();
@@ -91,6 +102,37 @@ namespace SafeNodeAPI.Src.Services.Auth
             using var hmac = new HMACSHA512(salt);
             var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
             return computedHash.SequenceEqual(hash);
+        }
+        private string CreateJwtToken(UserMaster user, out DateTime expiryDate)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_jwtSettings.SecretKey);
+            expiryDate = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes);
+            var claims = new[]
+            {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.Role?.ToString()??"")
+            };
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = expiryDate,
+                Issuer = _jwtSettings.Issuer,
+                Audience = _jwtSettings.Audience,
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+        private static string GenerateRefreshToken()
+        {
+            var randomBytes = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomBytes);
+            return Convert.ToBase64String(randomBytes);
         }
 
     }

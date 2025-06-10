@@ -11,41 +11,50 @@ namespace SafeNodeAPI.Tests.IntegrationTests
     {
         private readonly HttpClient _client = factory.CreateClient();
 
-        [Fact(DisplayName = "Register + Login Flow Should Return Valid JWT Token")]
-        public async Task RegisterAndLogin_ShouldReturnJwtToken()
+        [Fact(DisplayName = "Register + Login Flow Should Return Valid JWT + RefreshToken")]
+        public async Task RegisterAndLogin_ShouldReturnJwtAndRefreshToken()
         {
             var email = $"testuser_{Guid.NewGuid()}@example.com";
+            var password = "StrongPass@123";
+
             var registerRequest = new RegisterRequest
             {
                 FirstName = "Test",
                 LastName = "User",
                 Email = email,
-                Password = "StrongPass@123",
+                Password = password,
                 Role = Models.Constants.UserRole.Viewer
             };
 
             var loginRequest = new LoginRequest
             {
                 Email = email,
-                Password = "StrongPass@123"
+                Password = password
             };
 
+            // Act - Register
             var registerResponse = await _client.PostAsJsonAsync("/api/auth/registerUser", registerRequest);
             registerResponse.EnsureSuccessStatusCode();
 
+            // Act - Login
             var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
             loginResponse.EnsureSuccessStatusCode();
 
             var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
 
+            // Assert
             loginResult.Should().NotBeNull();
-            loginResult!.Token.Should().NotBeNullOrEmpty();
+            loginResult!.Token.Should().NotBeNullOrWhiteSpace();
+            loginResult.RefreshToken.Should().NotBeNullOrWhiteSpace();
+            loginResult.Expiry.Should().BeAfter(DateTime.UtcNow);
+            loginResult.RefreshTokenExpiry.Should().BeAfter(DateTime.UtcNow);
 
+            // Parse JWT and validate claims
             var handler = new JwtSecurityTokenHandler();
-            var token = handler.ReadJwtToken(loginResult.Token);
+            var jwtToken = handler.ReadJwtToken(loginResult.Token);
 
-            token.Claims.Should().Contain(c => c.Type == "email" && c.Value == email);
-            token.Claims.Should().Contain(c => c.Type == "role" && c.Value == "Viewer");
+            jwtToken.Claims.Should().Contain(c => c.Type == "email" && c.Value == email);
+            jwtToken.Claims.Should().Contain(c => c.Type == "role" && c.Value == "Viewer");
         }
     }
 }

@@ -7,5 +7,6 @@ namespace SafeNodeAPI.Src.Services.Auth
     {
         Task<LoginResponse> LoginAsync(LoginRequest request);
         Task<RegisterResponse> RegisterAsync(RegisterRequest request);
+        Task<RefreshTokenResponse> RefreshTokenAsync(RefreshTokenRequest request);
     }
 }

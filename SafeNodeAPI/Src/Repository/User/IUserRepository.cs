@@ -6,5 +6,6 @@ namespace SafeNodeAPI.Src.Repository.User
     {
         Task<UserMaster?> GetUserByEmailAsync(string email);
         Task<UserMaster> CreateUserAsync(UserMaster request);
+        Task<UserMaster?> UpdateUserAsync(UserMaster request);
     }
 }

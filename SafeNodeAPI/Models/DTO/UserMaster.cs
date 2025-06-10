@@ -27,7 +27,10 @@ namespace SafeNodeAPI.Models.DTO
         public UserRole? Role { get; set; } = UserRole.Viewer;
         public required byte[] PasswordHash { get; set; }
         public required byte[] PasswordSalt { get; set; }
-
+        [Column(TypeName = "varchar(1000)")]
+        [MaxLength(1000)]
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiry { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
         public bool IsActive { get; set; } = true;

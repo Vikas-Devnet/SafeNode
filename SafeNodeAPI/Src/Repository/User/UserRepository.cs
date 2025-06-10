@@ -26,5 +26,19 @@ namespace SafeNodeAPI.Src.Repository.User
             }
             return user;
         }
+
+        public async Task<UserMaster?> UpdateUserAsync(UserMaster user)
+        {
+            _dbContext.UserMaster.Update(user);
+            try
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new Exception("An error occurred while updating the user.", ex);
+            }
+            return user;
+        }
     }
 }

@@ -43,5 +43,23 @@ namespace SafeNodeAPI.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+        [HttpPost("refreshToken")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            try
+            {
+                var result = await _authService.RefreshTokenAsync(request);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
     }
 }
