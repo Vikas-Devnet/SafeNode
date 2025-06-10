@@ -1,4 +1,4 @@
-# Secure File Vault API
+# SafeNode API
 
 A secure and scalable RESTful API for personal file storage and management, built with .NET 9 and Entity Framework Core. This project enables users to sign up, log in using JWT-based authentication, and securely upload, organize, and manage their files and folders with support for Azure Blob Storage integration.
 
@@ -75,5 +75,5 @@ A secure and scalable RESTful API for personal file storage and management, buil
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/Vikas-Devnet/SecureFileVaultAPI.git
-cd SecureFileVaultAPI
+git clone https://github.com/Vikas-Devnet/SafeNode.git
+cd SafeNodeApi
