@@ -23,6 +23,7 @@ namespace SafeNodeAPI
             }
 
             app.UseHttpsRedirection();
+            app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
             app.Run();
@@ -46,7 +47,7 @@ namespace SafeNodeAPI
             });
             builder.Services.AddAppConfigurations(builder.Configuration);
             builder.Services.AddDatabase(builder.Configuration);
-
+            builder.Services.AddJwtAuthentication(builder.Configuration);
             // Register repositories and services
             builder.Services.AddRepositories();
             builder.Services.AddApplicationServices();
