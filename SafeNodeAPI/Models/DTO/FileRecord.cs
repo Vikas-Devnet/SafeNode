@@ -31,9 +31,9 @@ namespace SafeNodeAPI.Models.DTO
         public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
 
-        public int UserId { get; set; }
+        public int CreatedByUserId { get; set; }
 
-        [ForeignKey(nameof(UserId))]
+        [ForeignKey(nameof(CreatedByUserId))]
         public required UserMaster User { get; set; }
 
         public int? FolderId { get; set; }

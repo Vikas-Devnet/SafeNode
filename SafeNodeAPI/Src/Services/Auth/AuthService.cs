@@ -51,7 +51,6 @@ namespace SafeNodeAPI.Src.Services.Auth
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Email = request.Email,
-                Role = request.Role,
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 CreatedAt = DateTime.UtcNow
@@ -63,7 +62,6 @@ namespace SafeNodeAPI.Src.Services.Auth
             {
                 UserId = savedUser.Id,
                 Email = savedUser.Email,
-                Role = savedUser.Role.ToString(),
                 Message = "User Registered Successfully"
             };
         }
@@ -111,8 +109,7 @@ namespace SafeNodeAPI.Src.Services.Auth
             var claims = new[]
             {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role?.ToString()??"")
+            new Claim(ClaimTypes.Email, user.Email)
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor

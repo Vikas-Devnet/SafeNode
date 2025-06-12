@@ -20,10 +20,10 @@ namespace SafeNodeAPI.Models.DTO
         [ForeignKey(nameof(ParentFolderId))]
         public Folder? ParentFolder { get; set; }
 
-        public int UserId { get; set; }
+        public int CreatedByUserId { get; set; }
 
-        [ForeignKey(nameof(UserId))]
-        public required UserMaster User { get; set; }
+        [ForeignKey(nameof(CreatedByUserId))]
+        public UserMaster? User { get; set; }
 
         public ICollection<Folder>? SubFolders { get; set; }
         public ICollection<FileRecord>? Files { get; set; }

@@ -1,5 +1,4 @@
-﻿using SafeNodeAPI.Models.Constants;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace SafeNodeAPI.Models.Request
 {
@@ -15,7 +14,5 @@ namespace SafeNodeAPI.Models.Request
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$",
         ErrorMessage = "Password must include uppercase, lowercase, number, and special character.")]
         public required string Password { get; set; }
-        [EnumDataType(typeof(UserRole))]
-        public UserRole? Role { get; set; } = UserRole.Viewer;
     }
 }

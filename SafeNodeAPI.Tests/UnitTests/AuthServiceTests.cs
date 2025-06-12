@@ -35,13 +35,13 @@ namespace SafeNodeAPI.Tests.UnitTests
         [Fact]
         public async Task RegisterAsync_ShouldCreateUser_AndReturnResponse()
         {
+            // Arrange
             var request = new RegisterRequest
             {
                 FirstName = "Test",
                 LastName = "User",
                 Email = "test@example.com",
                 Password = "password",
-                Role = UserRole.Viewer
             };
 
             _mockUserRepo.Setup(r => r.GetUserByEmailAsync(request.Email))
@@ -50,16 +50,48 @@ namespace SafeNodeAPI.Tests.UnitTests
             _mockUserRepo.Setup(r => r.CreateUserAsync(It.IsAny<UserMaster>()))
                          .ReturnsAsync((UserMaster u) => u);
 
+            // Act
             var response = await _authService.RegisterAsync(request);
 
+            // Assert
             response.Should().NotBeNull();
             response.Email.Should().Be(request.Email);
-            response.Role.Should().Be(UserRole.Viewer.ToString());
+            response.Message.Should().Be("User Registered Successfully");
+            response.UserId.Should().Be(0); // Default value before save
+        }
+
+        [Fact]
+        public async Task RegisterAsync_ShouldThrowInvalidOperationException_WhenUserExists()
+        {
+            // Arrange
+            var request = new RegisterRequest
+            {
+                FirstName = "Test",
+                Email = "test@example.com",
+                Password = "password",
+            };
+
+            var existingUser = new UserMaster
+            {
+                Email = request.Email,
+                FirstName = "Existing",
+                PasswordHash = new byte[64],
+                PasswordSalt = new byte[128]
+            };
+
+            _mockUserRepo.Setup(r => r.GetUserByEmailAsync(request.Email))
+                         .ReturnsAsync(existingUser);
+
+            // Act & Assert
+            await _authService.Invoking(async x => await x.RegisterAsync(request))
+                .Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("User already exists.");
         }
 
         [Fact]
         public async Task LoginAsync_ShouldReturnToken_WhenCredentialsAreCorrect()
         {
+            // Arrange
             var password = "password";
             using var hmac = new HMACSHA512();
             var salt = hmac.Key;
@@ -69,18 +101,18 @@ namespace SafeNodeAPI.Tests.UnitTests
             {
                 Id = 1,
                 Email = "test@example.com",
-                Role = UserRole.Admin,
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 FirstName = "Test",
+                RefreshToken = null,
+                RefreshTokenExpiry = null
             };
 
             _mockUserRepo.Setup(r => r.GetUserByEmailAsync(user.Email))
                          .ReturnsAsync(user);
 
-            _mockUserRepo.Setup(x => x.CreateUserAsync(It.IsAny<UserMaster>()))
-             .ReturnsAsync((UserMaster u) => u);
-
+            _mockUserRepo.Setup(r => r.UpdateUserAsync(It.IsAny<UserMaster>()))
+                         .ReturnsAsync((UserMaster u) => u);
 
             var loginRequest = new LoginRequest
             {
@@ -88,49 +120,41 @@ namespace SafeNodeAPI.Tests.UnitTests
                 Password = password
             };
 
+            // Act
             var result = await _authService.LoginAsync(loginRequest);
 
+            // Assert
             result.Should().NotBeNull();
             result.Token.Should().NotBeNullOrWhiteSpace();
             result.RefreshToken.Should().NotBeNullOrWhiteSpace();
             result.Expiry.Should().BeAfter(DateTime.UtcNow);
             result.RefreshTokenExpiry.Should().BeAfter(DateTime.UtcNow);
+            result.Message.Should().Be("Logged in Successfully");
+
+            _mockUserRepo.Verify(r => r.UpdateUserAsync(It.Is<UserMaster>(u =>
+                u.RefreshToken != null &&
+                u.RefreshTokenExpiry != null)), Times.Once);
         }
 
         [Fact]
-        public async Task RegisterAsync_ShouldThrowException_WhenUserExists()
+        public async Task LoginAsync_ShouldThrowUnauthorizedAccessException_WhenUserNotFound()
         {
-            var request = new RegisterRequest
-            {
-                FirstName = "Test",
-                Email = "test@example.com",
-                Password = "password",
-                Role = UserRole.Admin
-            };
-
-            _mockUserRepo.Setup(r => r.GetUserByEmailAsync(request.Email))
-                         .ReturnsAsync(CreateMockUser(request.Email, request.Role));
-
-            var act = async () => await _authService.RegisterAsync(request);
-            await act.Should().ThrowAsync<InvalidOperationException>()
-                     .WithMessage("User already exists.");
-        }
-
-        [Fact]
-        public async Task LoginAsync_ShouldThrow_WhenUserNotFound()
-        {
+            // Arrange
             _mockUserRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>()))
                          .ReturnsAsync((UserMaster?)null);
 
             var request = new LoginRequest { Email = "fake@user.com", Password = "wrongpass" };
 
-            var act = async () => await _authService.LoginAsync(request);
-            await act.Should().ThrowAsync<UnauthorizedAccessException>();
+            // Act & Assert
+            await _authService.Invoking(async x => await x.LoginAsync(request))
+                .Should().ThrowAsync<UnauthorizedAccessException>()
+                .WithMessage("Invalid email or password");
         }
 
         [Fact]
-        public async Task LoginAsync_ShouldThrow_WhenPasswordDoesNotMatch()
+        public async Task LoginAsync_ShouldThrowUnauthorizedAccessException_WhenPasswordDoesNotMatch()
         {
+            // Arrange
             var password = "correct";
             var wrongPassword = "wrong";
             using var hmac = new HMACSHA512();
@@ -150,20 +174,22 @@ namespace SafeNodeAPI.Tests.UnitTests
 
             var request = new LoginRequest { Email = user.Email, Password = wrongPassword };
 
-            var act = async () => await _authService.LoginAsync(request);
-            await act.Should().ThrowAsync<UnauthorizedAccessException>();
+            // Act & Assert
+            await _authService.Invoking(async x => await x.LoginAsync(request))
+                .Should().ThrowAsync<UnauthorizedAccessException>()
+                .WithMessage("Invalid email or password");
         }
 
         [Fact]
         public async Task RefreshTokenAsync_ShouldReturnNewToken_WhenValid()
         {
+            // Arrange
             var oldRefreshToken = "old-refresh-token";
             var user = new UserMaster
             {
                 Id = 1,
                 Email = "test@example.com",
                 FirstName = "Test",
-                Role = UserRole.Admin,
                 RefreshToken = oldRefreshToken,
                 RefreshTokenExpiry = DateTime.UtcNow.AddMinutes(10),
                 PasswordHash = new byte[64],
@@ -173,9 +199,8 @@ namespace SafeNodeAPI.Tests.UnitTests
             _mockUserRepo.Setup(r => r.GetUserByEmailAsync(user.Email))
                          .ReturnsAsync(user);
 
-            _mockUserRepo.Setup(x => x.CreateUserAsync(It.IsAny<UserMaster>()))
-             .ReturnsAsync((UserMaster u) => u);
-
+            _mockUserRepo.Setup(r => r.UpdateUserAsync(It.IsAny<UserMaster>()))
+                         .ReturnsAsync((UserMaster u) => u);
 
             var request = new RefreshTokenRequest
             {
@@ -183,21 +208,36 @@ namespace SafeNodeAPI.Tests.UnitTests
                 RefreshToken = oldRefreshToken
             };
 
+            // Act
             var result = await _authService.RefreshTokenAsync(request);
 
+            // Assert
             result.Should().NotBeNull();
             result.Token.Should().NotBeNullOrWhiteSpace();
+            result.RefreshToken.Should().NotBeNullOrWhiteSpace();
             result.RefreshToken.Should().NotBe(oldRefreshToken);
+            result.Expiry.Should().BeAfter(DateTime.UtcNow);
             result.RefreshTokenExpiry.Should().BeAfter(DateTime.UtcNow);
+            result.Message.Should().Be("Token refreshed successfully");
+
+            _mockUserRepo.Verify(r => r.UpdateUserAsync(It.Is<UserMaster>(u =>
+                u.RefreshToken != oldRefreshToken &&
+                u.RefreshTokenExpiry > DateTime.UtcNow)), Times.Once);
         }
 
-
         [Fact]
-        public async Task RefreshTokenAsync_ShouldThrow_WhenTokenExpired()
+        public async Task RefreshTokenAsync_ShouldThrowUnauthorizedAccessException_WhenTokenExpired()
         {
-            var user = CreateMockUser("expired@test.com", UserRole.Viewer);
-            user.RefreshToken = "expired-token";
-            user.RefreshTokenExpiry = DateTime.UtcNow.AddMinutes(-1);
+            // Arrange
+            var user = new UserMaster
+            {
+                Email = "expired@test.com",
+                FirstName = "Test",
+                RefreshToken = "expired-token",
+                RefreshTokenExpiry = DateTime.UtcNow.AddMinutes(-1),
+                PasswordHash = new byte[64],
+                PasswordSalt = new byte[128]
+            };
 
             _mockUserRepo.Setup(r => r.GetUserByEmailAsync(user.Email))
                          .ReturnsAsync(user);
@@ -208,16 +248,25 @@ namespace SafeNodeAPI.Tests.UnitTests
                 RefreshToken = user.RefreshToken
             };
 
-            var act = async () => await _authService.RefreshTokenAsync(request);
-            await act.Should().ThrowAsync<UnauthorizedAccessException>();
+            // Act & Assert
+            await _authService.Invoking(async x => await x.RefreshTokenAsync(request))
+                .Should().ThrowAsync<UnauthorizedAccessException>()
+                .WithMessage("Invalid or expired refresh token");
         }
 
         [Fact]
-        public async Task RefreshTokenAsync_ShouldThrow_WhenTokenInvalid()
+        public async Task RefreshTokenAsync_ShouldThrowUnauthorizedAccessException_WhenTokenInvalid()
         {
-            var user = CreateMockUser("invalid@test.com", UserRole.Editor);
-            user.RefreshToken = "actual-token";
-            user.RefreshTokenExpiry = DateTime.UtcNow.AddMinutes(10);
+            // Arrange
+            var user = new UserMaster
+            {
+                Email = "invalid@test.com",
+                FirstName = "Test",
+                RefreshToken = "actual-token",
+                RefreshTokenExpiry = DateTime.UtcNow.AddMinutes(10),
+                PasswordHash = new byte[64],
+                PasswordSalt = new byte[128]
+            };
 
             _mockUserRepo.Setup(r => r.GetUserByEmailAsync(user.Email))
                          .ReturnsAsync(user);
@@ -228,22 +277,29 @@ namespace SafeNodeAPI.Tests.UnitTests
                 RefreshToken = "fake-token"
             };
 
-            var act = async () => await _authService.RefreshTokenAsync(request);
-            await act.Should().ThrowAsync<UnauthorizedAccessException>();
+            // Act & Assert
+            await _authService.Invoking(async x => await x.RefreshTokenAsync(request))
+                .Should().ThrowAsync<UnauthorizedAccessException>()
+                .WithMessage("Invalid or expired refresh token");
         }
 
-        private static UserMaster CreateMockUser(string email, UserRole? role)
+        [Fact]
+        public async Task RefreshTokenAsync_ShouldThrowUnauthorizedAccessException_WhenUserNotFound()
         {
-            using var hmac = new HMACSHA512();
-            return new UserMaster
+            // Arrange
+            _mockUserRepo.Setup(r => r.GetUserByEmailAsync(It.IsAny<string>()))
+                         .ReturnsAsync((UserMaster?)null);
+
+            var request = new RefreshTokenRequest
             {
-                Id = 1,
-                FirstName = "Test",
-                Email = email,
-                Role = role ?? UserRole.Viewer,
-                PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes("password")),
-                PasswordSalt = hmac.Key
+                Email = "nonexistent@test.com",
+                RefreshToken = "any-token"
             };
+
+            // Act & Assert
+            await _authService.Invoking(async x => await x.RefreshTokenAsync(request))
+                .Should().ThrowAsync<UnauthorizedAccessException>()
+                .WithMessage("Invalid or expired refresh token");
         }
     }
 }

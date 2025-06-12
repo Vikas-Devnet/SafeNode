@@ -1,4 +1,3 @@
-using Microsoft.OpenApi.Models;
 using SafeNodeAPI.Extensions;
 using System.Text.Json.Serialization;
 
@@ -36,15 +35,8 @@ namespace SafeNodeAPI
                 });
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo
-                {
-                    Title = "SafeNode API",
-                    Version = "v1",
-                    Description = "A secure file vault API"
-                });
-            });
+            builder.Services.AddSwaggerGenUI();
+
             builder.Services.AddAppConfigurations(builder.Configuration);
             builder.Services.AddDatabase(builder.Configuration);
             builder.Services.AddJwtAuthentication(builder.Configuration);

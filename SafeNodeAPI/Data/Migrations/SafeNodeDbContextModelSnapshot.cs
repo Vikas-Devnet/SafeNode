@@ -40,6 +40,9 @@ namespace SafeNodeAPI.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
@@ -60,19 +63,16 @@ namespace SafeNodeAPI.Data.Migrations
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BlobStorageName")
                         .IsUnique();
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.HasIndex("FileName");
 
                     b.HasIndex("FolderId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("FileRecord");
                 });
@@ -85,6 +85,9 @@ namespace SafeNodeAPI.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("FolderName")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -93,18 +96,43 @@ namespace SafeNodeAPI.Data.Migrations
                     b.Property<int?>("ParentFolderId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("FolderName");
 
                     b.HasIndex("ParentFolderId");
 
+                    b.ToTable("Folder");
+                });
+
+            modelBuilder.Entity("SafeNodeAPI.Models.DTO.FolderPermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccessLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("FolderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FolderId");
+
                     b.HasIndex("UserId");
 
-                    b.ToTable("Folder");
+                    b.ToTable("FolderPermission");
                 });
 
             modelBuilder.Entity("SafeNodeAPI.Models.DTO.UserMaster", b =>
@@ -150,10 +178,6 @@ namespace SafeNodeAPI.Data.Migrations
                     b.Property<DateTime?>("RefreshTokenExpiry")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Role")
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -167,15 +191,15 @@ namespace SafeNodeAPI.Data.Migrations
 
             modelBuilder.Entity("SafeNodeAPI.Models.DTO.FileRecord", b =>
                 {
+                    b.HasOne("SafeNodeAPI.Models.DTO.UserMaster", "User")
+                        .WithMany("Files")
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("SafeNodeAPI.Models.DTO.Folder", "Folder")
                         .WithMany("Files")
                         .HasForeignKey("FolderId");
-
-                    b.HasOne("SafeNodeAPI.Models.DTO.UserMaster", "User")
-                        .WithMany("Files")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Folder");
 
@@ -184,17 +208,36 @@ namespace SafeNodeAPI.Data.Migrations
 
             modelBuilder.Entity("SafeNodeAPI.Models.DTO.Folder", b =>
                 {
+                    b.HasOne("SafeNodeAPI.Models.DTO.UserMaster", "User")
+                        .WithMany("Folders")
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("SafeNodeAPI.Models.DTO.Folder", "ParentFolder")
                         .WithMany("SubFolders")
                         .HasForeignKey("ParentFolderId");
 
-                    b.HasOne("SafeNodeAPI.Models.DTO.UserMaster", "User")
-                        .WithMany("Folders")
-                        .HasForeignKey("UserId")
+                    b.Navigation("ParentFolder");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SafeNodeAPI.Models.DTO.FolderPermission", b =>
+                {
+                    b.HasOne("SafeNodeAPI.Models.DTO.Folder", "Folder")
+                        .WithMany()
+                        .HasForeignKey("FolderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ParentFolder");
+                    b.HasOne("SafeNodeAPI.Models.DTO.UserMaster", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Folder");
 
                     b.Navigation("User");
                 });

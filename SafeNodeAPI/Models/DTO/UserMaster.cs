@@ -24,7 +24,6 @@ namespace SafeNodeAPI.Models.DTO
         [MaxLength(350)]
         [EmailAddress]
         public required string Email { get; set; }
-        public UserRole? Role { get; set; } = UserRole.Viewer;
         public required byte[] PasswordHash { get; set; }
         public required byte[] PasswordSalt { get; set; }
         [Column(TypeName = "varchar(1000)")]

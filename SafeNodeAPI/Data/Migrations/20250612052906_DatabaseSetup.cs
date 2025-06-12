@@ -1,11 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace SafeNodeAPI.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AuthMigration : Migration
+    public partial class DatabaseSetup : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,9 +20,10 @@ namespace SafeNodeAPI.Data.Migrations
                     FirstName = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false),
                     LastName = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true),
                     Email = table.Column<string>(type: "varchar(350)", maxLength: 350, nullable: false),
-                    Role = table.Column<string>(type: "varchar(20)", maxLength: 20, nullable: true),
                     PasswordHash = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
                     PasswordSalt = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    RefreshToken = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: true),
+                    RefreshTokenExpiry = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
@@ -39,7 +41,7 @@ namespace SafeNodeAPI.Data.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     FolderName = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false),
                     ParentFolderId = table.Column<int>(type: "int", nullable: true),
-                    UserId = table.Column<int>(type: "int", nullable: false)
+                    CreatedByUserId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -50,8 +52,8 @@ namespace SafeNodeAPI.Data.Migrations
                         principalTable: "Folder",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Folder_UserMaster_UserId",
-                        column: x => x.UserId,
+                        name: "FK_Folder_UserMaster_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
                         principalTable: "UserMaster",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -70,7 +72,7 @@ namespace SafeNodeAPI.Data.Migrations
                     BlobStorageName = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    UserId = table.Column<int>(type: "int", nullable: false),
+                    CreatedByUserId = table.Column<int>(type: "int", nullable: false),
                     FolderId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -82,11 +84,38 @@ namespace SafeNodeAPI.Data.Migrations
                         principalTable: "Folder",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_FileRecord_UserMaster_UserId",
-                        column: x => x.UserId,
+                        name: "FK_FileRecord_UserMaster_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
                         principalTable: "UserMaster",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "FolderPermission",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FolderId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    AccessLevel = table.Column<string>(type: "varchar(20)", maxLength: 20, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FolderPermission", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_FolderPermission_Folder_FolderId",
+                        column: x => x.FolderId,
+                        principalTable: "Folder",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_FolderPermission_UserMaster_UserId",
+                        column: x => x.UserId,
+                        principalTable: "UserMaster",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -94,6 +123,11 @@ namespace SafeNodeAPI.Data.Migrations
                 table: "FileRecord",
                 column: "BlobStorageName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FileRecord_CreatedByUserId",
+                table: "FileRecord",
+                column: "CreatedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_FileRecord_FileName",
@@ -106,9 +140,9 @@ namespace SafeNodeAPI.Data.Migrations
                 column: "FolderId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_FileRecord_UserId",
-                table: "FileRecord",
-                column: "UserId");
+                name: "IX_Folder_CreatedByUserId",
+                table: "Folder",
+                column: "CreatedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Folder_FolderName",
@@ -121,8 +155,13 @@ namespace SafeNodeAPI.Data.Migrations
                 column: "ParentFolderId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Folder_UserId",
-                table: "Folder",
+                name: "IX_FolderPermission_FolderId",
+                table: "FolderPermission",
+                column: "FolderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FolderPermission_UserId",
+                table: "FolderPermission",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -137,6 +176,9 @@ namespace SafeNodeAPI.Data.Migrations
         {
             migrationBuilder.DropTable(
                 name: "FileRecord");
+
+            migrationBuilder.DropTable(
+                name: "FolderPermission");
 
             migrationBuilder.DropTable(
                 name: "Folder");
