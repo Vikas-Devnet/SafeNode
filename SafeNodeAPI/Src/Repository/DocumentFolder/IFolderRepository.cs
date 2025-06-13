@@ -6,5 +6,7 @@ namespace SafeNodeAPI.Src.Repository.DocumentFolder
     {
         Task<Folder> AddFolderAsync(Folder folder);
         Task<Folder?> GetFolderByIdAsync(int id);
+        Task<IEnumerable<Folder?>> GetRootFoldersByUserIdAsync(int userId);
+        Task DeleteFolderById(int folderId);
     }
 }

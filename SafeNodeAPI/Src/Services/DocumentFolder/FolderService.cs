@@ -1,4 +1,5 @@
-﻿using SafeNodeAPI.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using SafeNodeAPI.Data;
 using SafeNodeAPI.Models.Constants;
 using SafeNodeAPI.Models.DTO;
 using SafeNodeAPI.Models.Request;
@@ -42,6 +43,96 @@ namespace SafeNodeAPI.Src.Services.DocumentFolder
                 Id = createdFolder.Id,
                 FolderName = createdFolder.FolderName,
                 ParentFolderId = createdFolder.ParentFolderId
+            };
+
+        }
+        public async Task<FolderResponse?> GetSubFolderByID(int folderId, int userId)
+        {
+            _ = await _permissionService.GetUserFolderAccessLevelAsync(userId, folderId)
+                ?? throw new UnauthorizedAccessException("Insufficient permissions to view a folder in this location.");
+
+            var folder = await _folderRepo.GetFolderByIdAsync(folderId)
+                ?? throw new KeyNotFoundException("Folder not found.");
+
+            return MapToResponse(folder);
+        }
+        public async Task<IEnumerable<FolderResponse>> GetRootFoldersByUserIdAsync(int userId)
+        {
+            var folders = await _folderRepo.GetRootFoldersByUserIdAsync(userId);
+            return [.. folders
+                .Where(f => f != null)
+                .Select(f => MapToResponse(f!))];
+        }
+        public async Task DeleteFolderById(int folderId, int userId)
+        {
+            var folder = await _folderRepo.GetFolderByIdAsync(folderId)
+                ?? throw new KeyNotFoundException("Folder not found.");
+            await DeleteFolderRecursive(folder, userId);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task DeleteFolderRecursive(Folder folder, int userId)
+        {
+            var accessLevel = await _permissionService.GetUserFolderAccessLevelAsync(userId, folder.Id);
+
+            if (accessLevel is null || accessLevel != UserRole.Admin)
+                throw new UnauthorizedAccessException("Insufficient permissions to delete this folder.");
+
+            _context.Entry(folder).Collection(f => f.SubFolders!).Load();
+
+            foreach (var subFolder in folder.SubFolders!)
+            {
+                var subAccess = await _permissionService.GetUserFolderAccessLevelAsync(userId, subFolder.Id);
+
+                if (subAccess == UserRole.Admin)
+                {
+                    await DeleteFolderRecursive(subFolder, userId);
+                }
+                else
+                {
+                    subFolder.ParentFolderId = null;
+                }
+            }
+            _context.Folders.Remove(folder);
+        }
+        public async Task ProvideFolderAccessAsync(ProvideAccessRequest request, int requesterUserId)
+        {
+            var folder = await _folderRepo.GetFolderByIdAsync(request.FolderId)
+                ?? throw new KeyNotFoundException("Folder not found.");
+
+            var requesterRole = await _permissionService.GetUserFolderAccessLevelAsync(requesterUserId, folder.Id);
+            if (requesterRole is not UserRole.Admin)
+                throw new UnauthorizedAccessException("Only Admins can provide access to folders.");
+
+            var existingPermission = await _context.FolderPermissions
+                .FirstOrDefaultAsync(p => p.FolderId == folder.Id && p.UserId == request.TargetUserId);
+
+            if (existingPermission != null)
+            {
+                existingPermission.AccessLevel = request.AccessLevel;
+            }
+            else
+            {
+                _context.FolderPermissions.Add(new FolderPermission
+                {
+                    FolderId = folder.Id,
+                    UserId = request.TargetUserId,
+                    AccessLevel = request.AccessLevel
+                });
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+
+        private FolderResponse MapToResponse(Folder folder)
+        {
+            return new FolderResponse
+            {
+                Id = folder.Id,
+                FolderName = folder.FolderName ?? string.Empty,
+                ParentFolderId = folder.ParentFolderId,
+                SubFolders = folder.SubFolders?.Select(MapToResponse).ToList()
             };
 
         }

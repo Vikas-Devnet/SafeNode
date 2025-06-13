@@ -5,5 +5,6 @@
         public int Id { get; set; }
         public string FolderName { get; set; } = string.Empty;
         public int? ParentFolderId { get; set; }
+        public List<FolderResponse>? SubFolders { get; set; } = [];
     }
 }
