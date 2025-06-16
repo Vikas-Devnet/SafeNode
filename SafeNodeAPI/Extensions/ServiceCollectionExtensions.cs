@@ -7,8 +7,10 @@ using SafeNodeAPI.Src.Repository.DocumentFolder;
 using SafeNodeAPI.Src.Repository.User;
 using SafeNodeAPI.Src.Repository.UserFiles;
 using SafeNodeAPI.Src.Services.Auth;
+using SafeNodeAPI.Src.Services.Azure;
 using SafeNodeAPI.Src.Services.DocumentFolder;
 using SafeNodeAPI.Src.Services.Permissions;
+using SafeNodeAPI.Src.Services.UserFiles;
 using System.Text;
 
 namespace SafeNodeAPI.Extensions
@@ -18,6 +20,7 @@ namespace SafeNodeAPI.Extensions
         public static IServiceCollection AddAppConfigurations(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
+            services.Configure<AzureBlobSettings>(configuration.GetSection("AzureBlobStorage"));
 
             return services;
         }
@@ -74,6 +77,9 @@ namespace SafeNodeAPI.Extensions
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IFolderService, FolderService>();
             services.AddScoped<IPermissionService, PermissionService>();
+            services.AddScoped<IAzureBlobStorageService, AzureBlobStorageService>();
+            services.AddScoped<IFileService, FileService>();
+
             return services;
         }
 

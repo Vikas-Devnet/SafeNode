@@ -22,6 +22,32 @@ namespace SafeNodeAPI.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("SafeNodeAPI.Models.DTO.FilePermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccessLevel")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FileId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("FilePermission");
+                });
+
             modelBuilder.Entity("SafeNodeAPI.Models.DTO.FileRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -33,7 +59,7 @@ namespace SafeNodeAPI.Data.Migrations
                     b.Property<string>("BlobStorageName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("varchar(150)");
+                        .HasColumnType("varchar(350)");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
@@ -189,6 +215,25 @@ namespace SafeNodeAPI.Data.Migrations
                     b.ToTable("UserMaster");
                 });
 
+            modelBuilder.Entity("SafeNodeAPI.Models.DTO.FilePermission", b =>
+                {
+                    b.HasOne("SafeNodeAPI.Models.DTO.FileRecord", "File")
+                        .WithMany("FilePermissions")
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SafeNodeAPI.Models.DTO.UserMaster", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("File");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SafeNodeAPI.Models.DTO.FileRecord", b =>
                 {
                     b.HasOne("SafeNodeAPI.Models.DTO.UserMaster", "User")
@@ -240,6 +285,11 @@ namespace SafeNodeAPI.Data.Migrations
                     b.Navigation("Folder");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SafeNodeAPI.Models.DTO.FileRecord", b =>
+                {
+                    b.Navigation("FilePermissions");
                 });
 
             modelBuilder.Entity("SafeNodeAPI.Models.DTO.Folder", b =>

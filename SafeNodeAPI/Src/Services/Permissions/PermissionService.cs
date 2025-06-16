@@ -27,5 +27,27 @@ namespace SafeNodeAPI.Src.Services.Permissions
                 folderId = parentId.Value;
             }
         }
+
+        public async Task<UserRole?> GetUserFileAccessLevelAsync(int userId, int fileId)
+        {
+            var filePermission = await _context.FilePermissions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.UserId == userId && p.FileId == fileId);
+
+            if (filePermission != null)
+                return filePermission.AccessLevel;
+
+            var folderId = await _context.FileRecords
+                .AsNoTracking()
+                .Where(f => f.Id == fileId)
+                .Select(f => f.FolderId)
+                .FirstOrDefaultAsync();
+
+            if (folderId == null)
+                return null;
+
+            return await GetUserFolderAccessLevelAsync(userId, folderId);
+        }
+
     }
 }

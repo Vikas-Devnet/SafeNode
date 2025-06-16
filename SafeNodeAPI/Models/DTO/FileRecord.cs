@@ -24,7 +24,7 @@ namespace SafeNodeAPI.Models.DTO
 
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
-        [Column(TypeName = "varchar(150)")]
+        [Column(TypeName = "varchar(350)")]
         [MaxLength(150)]
         public required string BlobStorageName { get; set; }
 
@@ -34,11 +34,13 @@ namespace SafeNodeAPI.Models.DTO
         public int CreatedByUserId { get; set; }
 
         [ForeignKey(nameof(CreatedByUserId))]
-        public required UserMaster User { get; set; }
+        public UserMaster? User { get; set; }
 
         public int? FolderId { get; set; }
 
         [ForeignKey(nameof(FolderId))]
         public Folder? Folder { get; set; }
+        public ICollection<FilePermission>? FilePermissions { get; set; }
+
     }
 }

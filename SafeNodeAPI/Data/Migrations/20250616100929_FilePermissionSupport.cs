@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SafeNodeAPI.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class DatabaseSetup : Migration
+    public partial class FilePermissionSupport : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -69,7 +69,7 @@ namespace SafeNodeAPI.Data.Migrations
                     ContentType = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false),
                     FileSize = table.Column<long>(type: "bigint", nullable: false),
                     UploadedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    BlobStorageName = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: false),
+                    BlobStorageName = table.Column<string>(type: "varchar(350)", maxLength: 150, nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedByUserId = table.Column<int>(type: "int", nullable: false),
@@ -117,6 +117,43 @@ namespace SafeNodeAPI.Data.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "FilePermission",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FileId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    AccessLevel = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FilePermission", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_FilePermission_FileRecord_FileId",
+                        column: x => x.FileId,
+                        principalTable: "FileRecord",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_FilePermission_UserMaster_UserId",
+                        column: x => x.UserId,
+                        principalTable: "UserMaster",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FilePermission_FileId",
+                table: "FilePermission",
+                column: "FileId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FilePermission_UserId",
+                table: "FilePermission",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_FileRecord_BlobStorageName",
@@ -175,10 +212,13 @@ namespace SafeNodeAPI.Data.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "FileRecord");
+                name: "FilePermission");
 
             migrationBuilder.DropTable(
                 name: "FolderPermission");
+
+            migrationBuilder.DropTable(
+                name: "FileRecord");
 
             migrationBuilder.DropTable(
                 name: "Folder");

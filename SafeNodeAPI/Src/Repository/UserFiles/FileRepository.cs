@@ -28,5 +28,19 @@ namespace SafeNodeAPI.Src.Repository.UserFiles
                 .AsNoTracking()
                 .FirstOrDefaultAsync(f => f.Id == id);
         }
+
+        public async Task<FileRecord?> UpdateFileAsync(FileRecord file)
+        {
+            _dbContext.Update(file);
+            try
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("An error occurred while updating the file.", ex);
+            }
+            return file;
+        }
     }
 }
