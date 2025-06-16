@@ -1,7 +1,8 @@
-﻿@SafeNodeAPI_HostAddress = http://localhost:5226/api/auth
+﻿@SafeNodeAPI_HostAddress = http://localhost:5226/api
+@jwtToken = Bearer <PASTE_YOUR_JWT_TOKEN_HERE>
 
 ### ✅ 1. Register New User
-POST {{SafeNodeAPI_HostAddress}}/registerUser
+POST {{SafeNodeAPI_HostAddress}}/auth/registerUser
 Content-Type: application/json
 
 {
@@ -13,7 +14,7 @@ Content-Type: application/json
 }
 
 ### ✅ 2. Login User
-POST {{SafeNodeAPI_HostAddress}}/login
+POST {{SafeNodeAPI_HostAddress}}/auth/login
 Content-Type: application/json
 
 {
@@ -22,10 +23,51 @@ Content-Type: application/json
 }
 
 ### ✅ 3. Refresh JWT Token
-POST {{SafeNodeAPI_HostAddress}}/refreshToken
+POST {{SafeNodeAPI_HostAddress}}/auth/refreshToken
 Content-Type: application/json
 
 {
   "email": "<ENTER_EMAIL_ADDRESS_HERE>",
   "refreshToken": "<PASTE_REFRESH_TOKEN_HERE>"
 }
+
+### ✅ 4. Create Folder
+POST {{SafeNodeAPI_HostAddress}}/folder/createFolder
+Content-Type: application/json
+Authorization: {{jwtToken}}
+{
+  "folderName": "<ENTER_FOLDER_NAME_HERE>",
+  "parentFolderId": "<ENTER_PARENT_FOLDER_ID_HERE>" 
+}
+
+### ✅ 5. Get Sub Folder
+GET {{SafeNodeAPI_HostAddress}}/folder/GetSubFolderById
+Content-Type: application/json
+Authorization: {{jwtToken}}
+{
+  "folderId": "<ENTER_PARENT_FOLDER_ID_HERE>" 
+}
+
+### ✅ 6. Get All Folders
+GET {{SafeNodeAPI_HostAddress}}/folder/getRootParentFolders
+Content-Type: application/json
+Authorization: {{jwtToken}}
+
+### ✅ 7. Delete Folder
+DELETE {{SafeNodeAPI_HostAddress}}/folder/deleteFolder
+Authorization: {{jwtToken}}
+Content-Type: application/json
+{
+  "folderId": "<ENTER_FOLDER_ID_HERE>"
+}
+
+### ✅ 8. Grant Permission to Folder
+POST {{SafeNodeAPI_HostAddress}}/folder/provideFolderAccess
+Authorization: {{jwtToken}}
+Content-Type: application/json
+{
+  "folderId": "<ENTER_FOLDER_ID_HERE>",
+  "targetUserId": "<ENTER_USER_ID_HERE>",
+  "accessLevel": "<ENTER_PERMISSION_TYPE_HERE>"
+}
+

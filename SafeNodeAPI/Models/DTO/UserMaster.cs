@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SafeNodeAPI.Models.Constants;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 

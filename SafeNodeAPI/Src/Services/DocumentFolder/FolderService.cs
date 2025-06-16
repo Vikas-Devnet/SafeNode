@@ -67,34 +67,34 @@ namespace SafeNodeAPI.Src.Services.DocumentFolder
         {
             var folder = await _folderRepo.GetFolderByIdAsync(folderId)
                 ?? throw new KeyNotFoundException("Folder not found.");
+            var accessLevel = await _permissionService.GetUserFolderAccessLevelAsync(userId, folderId);
+            if (accessLevel is null || accessLevel != UserRole.Admin)
+                throw new UnauthorizedAccessException("Insufficient permissions to delete this folder.");
+
             await DeleteFolderRecursive(folder, userId);
             await _context.SaveChangesAsync();
         }
 
         private async Task DeleteFolderRecursive(Folder folder, int userId)
         {
-            var accessLevel = await _permissionService.GetUserFolderAccessLevelAsync(userId, folder.Id);
-
-            if (accessLevel is null || accessLevel != UserRole.Admin)
-                throw new UnauthorizedAccessException("Insufficient permissions to delete this folder.");
-
             _context.Entry(folder).Collection(f => f.SubFolders!).Load();
 
             foreach (var subFolder in folder.SubFolders!)
             {
-                var subAccess = await _permissionService.GetUserFolderAccessLevelAsync(userId, subFolder.Id);
-
-                if (subAccess == UserRole.Admin)
+                if (subFolder.CreatedByUserId == userId)
                 {
                     await DeleteFolderRecursive(subFolder, userId);
                 }
                 else
                 {
                     subFolder.ParentFolderId = null;
+                    _context.Folders.Update(subFolder);
                 }
             }
+
             _context.Folders.Remove(folder);
         }
+
         public async Task ProvideFolderAccessAsync(ProvideAccessRequest request, int requesterUserId)
         {
             var folder = await _folderRepo.GetFolderByIdAsync(request.FolderId)
