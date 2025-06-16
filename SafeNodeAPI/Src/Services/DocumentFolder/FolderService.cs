@@ -74,27 +74,6 @@ namespace SafeNodeAPI.Src.Services.DocumentFolder
             await DeleteFolderRecursive(folder, userId);
             await _context.SaveChangesAsync();
         }
-
-        private async Task DeleteFolderRecursive(Folder folder, int userId)
-        {
-            _context.Entry(folder).Collection(f => f.SubFolders!).Load();
-
-            foreach (var subFolder in folder.SubFolders!)
-            {
-                if (subFolder.CreatedByUserId == userId)
-                {
-                    await DeleteFolderRecursive(subFolder, userId);
-                }
-                else
-                {
-                    subFolder.ParentFolderId = null;
-                    _context.Folders.Update(subFolder);
-                }
-            }
-
-            _context.Folders.Remove(folder);
-        }
-
         public async Task ProvideFolderAccessAsync(ProvideAccessRequest request, int requesterUserId)
         {
             var folder = await _folderRepo.GetFolderByIdAsync(request.FolderId)
@@ -123,7 +102,61 @@ namespace SafeNodeAPI.Src.Services.DocumentFolder
 
             await _context.SaveChangesAsync();
         }
+        public async Task RevokeFolderAccessAsync(RevokeAccessRequest request, int requesterUserId)
+        {
+            var rootFolder = await _folderRepo.GetFolderByIdAsync(request.FolderId)
+                ?? throw new KeyNotFoundException("Folder not found.");
 
+            var requesterAccess = await _permissionService.GetUserFolderAccessLevelAsync(requesterUserId, request.FolderId);
+            if (requesterAccess is null || requesterAccess != UserRole.Admin)
+                throw new UnauthorizedAccessException("You don't have permission to revoke access.");
+
+            var permission = await _context.FolderPermissions
+                .FirstOrDefaultAsync(p => p.UserId == request.UserId && p.FolderId == request.FolderId)
+                ?? throw new InvalidOperationException("The user does not have explicit permission on this folder.");
+
+            _context.FolderPermissions.Remove(permission);
+
+            await DetachUserSubfoldersRecursive(rootFolder, request.UserId);
+
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task DeleteFolderRecursive(Folder folder, int userId)
+        {
+            _context.Entry(folder).Collection(f => f.SubFolders!).Load();
+
+            foreach (var subFolder in folder.SubFolders!)
+            {
+                if (subFolder.CreatedByUserId == userId)
+                {
+                    await DeleteFolderRecursive(subFolder, userId);
+                }
+                else
+                {
+                    subFolder.ParentFolderId = null;
+                    _context.Folders.Update(subFolder);
+                }
+            }
+
+            _context.Folders.Remove(folder);
+        }
+        private async Task DetachUserSubfoldersRecursive(Folder folder, int revokedUserId)
+        {
+            _context.Entry(folder).Collection(f => f.SubFolders!).Load();
+
+            foreach (var subFolder in folder.SubFolders!)
+            {
+                if (subFolder.CreatedByUserId == revokedUserId)
+                {
+                    subFolder.ParentFolderId = null;
+                }
+                else
+                {
+                    await DetachUserSubfoldersRecursive(subFolder, revokedUserId);
+                }
+            }
+        }
 
         private FolderResponse MapToResponse(Folder folder)
         {
@@ -136,5 +169,7 @@ namespace SafeNodeAPI.Src.Services.DocumentFolder
             };
 
         }
+
+
     }
 }

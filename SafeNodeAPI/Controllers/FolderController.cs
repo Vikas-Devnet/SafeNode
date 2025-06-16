@@ -110,5 +110,27 @@ namespace SafeNodeAPI.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+        [HttpPost("revokeFolderAccess")]
+        public async Task<IActionResult> RevokeFolderAccess([FromBody] RevokeAccessRequest request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _folderService.RevokeFolderAccessAsync(request, userId);
+                return Ok();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }

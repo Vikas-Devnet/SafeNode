@@ -10,5 +10,6 @@ namespace SafeNodeAPI.Src.Services.DocumentFolder
         Task<IEnumerable<FolderResponse>> GetRootFoldersByUserIdAsync(int userId);
         Task DeleteFolderById(int folderId, int userId);
         Task ProvideFolderAccessAsync(ProvideAccessRequest request, int requesterUserId);
+        Task RevokeFolderAccessAsync(RevokeAccessRequest request, int requesterUserId);
     }
 }

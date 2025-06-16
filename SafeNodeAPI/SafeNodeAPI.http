@@ -70,4 +70,12 @@ Content-Type: application/json
   "targetUserId": "<ENTER_USER_ID_HERE>",
   "accessLevel": "<ENTER_PERMISSION_TYPE_HERE>"
 }
+### ✅ 9. Revoke Permission from Folder
+POST {{SafeNodeAPI_HostAddress}}/folder/revokeFolderAccess
+Authorization: {{jwtToken}}
+Content-Type: application/json
+{
+  "folderId": "<ENTER_FOLDER_ID_HERE>",
+  "userId": "<ENTER_USER_ID_HERE>"
+}
 
