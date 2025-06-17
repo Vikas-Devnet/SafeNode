@@ -79,5 +79,27 @@ namespace SafeNodeAPI.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+        [HttpGet("getFilesByFolderId")]
+        public async Task<IActionResult> GetFilesByFolderId([FromQuery] int? folderId)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var files = await _fileService.GetFilesByFolderIdAsync(folderId, userId);
+                return Ok(files);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }
