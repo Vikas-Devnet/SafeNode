@@ -27,7 +27,6 @@ namespace SafeNodeAPI.Src.Services.UserFiles
             return (stream, record.ContentType, record.FileName);
         }
 
-
         public async Task<UploadFileResponse> UploadFileAsync(UploadFileRequest request, int userId)
         {
             var file = request.File;
@@ -100,5 +99,23 @@ namespace SafeNodeAPI.Src.Services.UserFiles
                 Message = "File deleted successfully."
             };
         }
+
+        public async Task<List<FileRecord>> GetFilesByFolderIdAsync(int? folderId, int userId)
+        {
+            var allFiles = await _fileRepo.GetFilesByFolderIdAsync(folderId);
+            var accessibleFiles = new List<FileRecord>();
+
+            foreach (var file in allFiles)
+            {
+                var accessLevel = await _permissionService.GetUserFileAccessLevelAsync(userId, file.Id);
+                if (accessLevel is UserRole.Admin or UserRole.Editor or UserRole.Viewer)
+                {
+                    accessibleFiles.Add(file);
+                }
+            }
+
+            return accessibleFiles;
+        }
+
     }
 }

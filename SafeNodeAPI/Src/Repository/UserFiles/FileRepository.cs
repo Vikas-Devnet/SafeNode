@@ -42,5 +42,24 @@ namespace SafeNodeAPI.Src.Repository.UserFiles
             }
             return file;
         }
+
+        public async Task<List<FileRecord>> GetFilesByFolderIdAsync(int? folderId)
+        {
+            var query = _dbContext.FileRecords
+                .Include(f => f.Folder)
+                .Include(f => f.User)
+                .Include(f => f.FilePermissions!)
+                    .ThenInclude(fp => fp.User)
+                .Where(f => !f.IsDeleted);
+
+            query = folderId.HasValue
+                ? query.Where(f => f.FolderId == folderId.Value)
+                : query.Where(f => f.FolderId == null);
+
+            return await query.ToListAsync();
+        }
+
+
+
     }
 }
